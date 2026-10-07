@@ -52,23 +52,28 @@
             color: black;
             box-shadow: 0 0 20px rgba(255,255,255,0.4);
         }
-        /* ボット用トラップ（人間には絶対に見えない） */
-        #bot-field {
-            position: absolute;
-            left: -9999px;
-            opacity: 0;
+        /* ボット用トラップ（画面外へ飛ばして完全隠蔽） */
+        .bot-trap {
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body oncontextmenu="return false;"> <div id="gate-container">
+<body oncontextmenu="return false;">
+    <div id="gate-container">
         <div class="logo-circle">
-            <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=80" style="width:60px; border-radius:10px;">
+            <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=80" style="width:60px; border-radius:10px;" alt="Logo">
         </div>
         <h1>FAINDER</h1>
         
-        <div id="bot-field">
-            <input type="text" id="trap_input" tabindex="-1">
+        <!-- ボットトラップ領域 -->
+        <div class="bot-trap" aria-hidden="true">
+            <input type="text" id="trap_input" name="website_url_check" tabindex="-1" autocomplete="off">
+            <input type="checkbox" id="trap_checkbox" name="agree_terms_check" tabindex="-1">
         </div>
 
         <button class="launch-btn" onclick="secureLaunch()">Fainderを起動する</button>
@@ -76,21 +81,56 @@
 
     <script>
         const loadTime = Date.now();
+        let isHumanInteraction = false;
 
-        // 1. 起動処理（ボット対策込み）
-        function secureLaunch() {
-            const trap = document.getElementById('trap_input').value;
+        // 人間特有の操作（マウス移動またはタッチ操作）を検知
+        function markAsHuman() {
+            isHumanInteraction = true;
+            window.removeEventListener('mousemove', markAsHuman);
+            window.removeEventListener('touchstart', markAsHuman);
+        }
+        window.addEventListener('mousemove', markAsHuman);
+        window.addEventListener('touchstart', markAsHuman);
+
+        // 設定したいパスワードのSHA-256ハッシュ値
+        // 例: パスワードが "fainder2026" の場合のハッシュ値
+        // （変更したい場合はブラウザのコンソール等で `await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ご希望のパスワード'))` を計算して置換してください）
+        const TARGET_PASSWORD_HASH = "8f362145b0a72099955761ebf7c032049d5a9d311d8825f82c47659556d11707";
+
+        // 文字列をSHA-256ハッシュ化する関数
+        async function hashPassword(str) {
+            const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // 1. 起動処理（ボット対策 ＋ パスワード認証）
+        async function secureLaunch() {
+            const trapInput = document.getElementById('trap_input').value;
+            const trapCheckbox = document.getElementById('trap_checkbox').checked;
             const clickTime = Date.now() - loadTime;
 
-            // トラップに値がある、またはクリックが速すぎる(0.5秒以内)場合はボット判定
-            if (trap !== "" || clickTime < 500) {
+            // ボット判定条件:
+            // - ハニーポットへの入力・操作がある
+            // - 読み込みから1秒未満（1000ms）のアクセス
+            // - 人間らしい操作（マウス・タッチ）が一度も発生していない
+            if (trapInput !== "" || trapCheckbox || clickTime < 1000 || !isHumanInteraction) {
                 console.warn("Access Denied.");
                 return;
             }
 
-            // 遷移先を文字結合で隠す
-            const target = ['index', '2', '.', 'h', 't', 'm', 'l'].join('');
-            location.href = target;
+            // パスワード入力ダイアログを表示
+            const userInput = prompt("パスワードを入力してください:");
+            if (!userInput) return;
+
+            const inputHash = await hashPassword(userInput);
+
+            if (inputHash === TARGET_PASSWORD_HASH) {
+                // 遷移先の動的生成
+                const target = ['index', '2', '.', 'h', 't', 'm', 'l'].join('');
+                location.href = target;
+            } else {
+                alert("パスワードが違います。");
+            }
         }
 
         // 2. コンソールガード（ショートカット禁止）
@@ -102,7 +142,7 @@
             }
         };
 
-        // 3. 無限デバッガー（コンソールを開くとフリーズさせる）
+        // 3. 無限デバッガー
         setInterval(function() {
             (function() {
                 (function a() {
