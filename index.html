@@ -92,19 +92,8 @@
         window.addEventListener('mousemove', markAsHuman);
         window.addEventListener('touchstart', markAsHuman);
 
-        // 設定したいパスワードのSHA-256ハッシュ値
-        // 例: パスワードが "fainder2026" の場合のハッシュ値
-        // （変更したい場合はブラウザのコンソール等で `await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ご希望のパスワード'))` を計算して置換してください）
-        const TARGET_PASSWORD_HASH = "8f362145b0a72099955761ebf7c032049d5a9d311d8825f82c47659556d11707";
-
-        // 文字列をSHA-256ハッシュ化する関数
-        async function hashPassword(str) {
-            const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
-        // 1. 起動処理（ボット対策 ＋ パスワード認証）
-        async function secureLaunch() {
+        // 1. 起動処理（ボット対策のみ実施して直接遷移）
+        function secureLaunch() {
             const trapInput = document.getElementById('trap_input').value;
             const trapCheckbox = document.getElementById('trap_checkbox').checked;
             const clickTime = Date.now() - loadTime;
@@ -118,19 +107,9 @@
                 return;
             }
 
-            // パスワード入力ダイアログを表示
-            const userInput = prompt("パスワードを入力してください:");
-            if (!userInput) return;
-
-            const inputHash = await hashPassword(userInput);
-
-            if (inputHash === TARGET_PASSWORD_HASH) {
-                // 遷移先の動的生成
-                const target = ['index', '2', '.', 'h', 't', 'm', 'l'].join('');
-                location.href = target;
-            } else {
-                alert("パスワードが違います。");
-            }
+            // 遷移先の動的生成（そのまま index2.html へ遷移）
+            const target = ['index', '2', '.', 'h', 't', 'm', 'l'].join('');
+            location.href = target;
         }
 
         // 2. コンソールガード（ショートカット禁止）
